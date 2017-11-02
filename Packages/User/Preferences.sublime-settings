@@ -1,0 +1,10 @@
+{
+	"color_scheme": "Packages/MarkdownLight/MarkdownDark.tmTheme",
+	"font_size": 16,
+	"highlight_line": false,
+	"ignored_packages":
+	[
+		"Markdown",
+		"Vintage"
+	]
+}

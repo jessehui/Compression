@@ -1,0 +1,21 @@
+{
+	"bootstrapped": true,
+	"in_process_packages":
+	[
+	],
+	"installed_packages":
+	[
+		"LiveReload",
+		"Markdown Extended",
+		"Markdown Preview",
+		"Markdown Table Formatter",
+		"MarkdownEditing",
+		"MarkdownHighlighting",
+		"MarkdownLight",
+		"MarkdownLivePreview",
+		"Markmon real-time markdown preview",
+		"Material Design Lite Snippets",
+		"Package Control",
+		"x86 and x86_64 Assembly"
+	]
+}
