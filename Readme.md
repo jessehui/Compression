@@ -23,3 +23,5 @@ There was still a problem with Huffman encoding (and all previous ones) : an hid
 It seems reasonable, but that's not even close to Shannon's limit. An event which has 90% probability to happen for example should be encoded using 0.15 bits. You can't do that using Huffman trees.
 
 A solution to this problem was found almost 30 years later, by Jorma Rissanen, under the name of Arithmetic coder.
+
+Zstd is developed for is configurable memory requirement, with the objective to fit into low-memory configurations, or servers handling many connections in parallel.
