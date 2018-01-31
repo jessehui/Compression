@@ -32,6 +32,8 @@ local int gz_load(state, buf, len, have)
         get = len - *have;
         if (get > max)
             get = max;
+        printf("state->fd = %d, buf = %s, have = %d, get = %d\n",
+                state->fd, buf, *have, get);
         ret = read(state->fd, buf + *have, get);
         if (ret <= 0)
             break;
@@ -378,7 +380,7 @@ int ZEXPORT gzread(file, buf, len)
     unsigned len;
 {
     gz_statep state;
-
+    printf("file->have = %d, file->next = %s, file->pos=%d\n", file->have, file->next, file->pos);
     /* get internal structure */
     if (file == NULL)
         return -1;

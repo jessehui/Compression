@@ -106,6 +106,7 @@ typedef struct z_stream_s {
 
 #ifdef ISAL_INSTALLED
     struct isal_zstream *internal_stream;  /* Internal stream used by ISA-L igzip */
+    struct inflate_state *isal_inflate_state;
 #endif
 } z_stream;
 

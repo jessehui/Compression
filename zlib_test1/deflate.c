@@ -301,6 +301,7 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
         return Z_STREAM_ERROR;
     }
 
+
 #ifdef ISAL_INSTALLED
         struct isal_zstream *isal_s = (struct isal_zstream *) ZALLOC(strm, 1, sizeof(struct isal_zstream));
         if (isal_s == Z_NULL) return Z_MEM_ERROR;
@@ -317,7 +318,7 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
         }
         
         strm->internal_stream = isal_s;
-        return Z_OK;
+        //return Z_OK;
 #endif
 
 
@@ -379,6 +380,7 @@ local int deflateStateCheck (strm)
         strm->zalloc == (alloc_func)0 || strm->zfree == (free_func)0)
         return 1;
     s = strm->state;
+    //|| s->strm != strm 
     if (s == Z_NULL || s->strm != strm || (s->status != INIT_STATE &&
 #ifdef GZIP
                                            s->status != GZIP_STATE &&
@@ -787,27 +789,6 @@ int ZEXPORT deflate (strm, flush)
 {
     int old_flush; /* value of flush param for previous deflate call */
     deflate_state *s;
-
-#ifdef ISAL_INSTALLED
-    struct isal_zstream *isal_s = strm->internal_stream;
-    isal_s->next_out = strm->next_out;
-    isal_s->avail_out = strm->avail_out;
-    isal_s->next_in = strm->next_in;
-    isal_s->avail_in = strm->avail_in;
-    isal_s->end_of_stream = 1;
-    
-    isal_deflate(isal_s);
-    strm->next_out = isal_s->next_out;
-    strm->avail_out = isal_s->avail_out; 
-    strm->next_in = isal_s->next_in; 
-    strm->avail_in = isal_s->avail_in;
-    strm->total_out = isal_s->total_out;
-    strm->internal_stream = isal_s;
-    if (isal_s->internal_state.state != ZSTATE_END)
-        return Z_OK;
-    return Z_STREAM_END;
-#endif
-
     if (deflateStateCheck(strm) || flush > Z_BLOCK || flush < 0) {
         return Z_STREAM_ERROR;
     }
@@ -850,7 +831,11 @@ int ZEXPORT deflate (strm, flush)
     if (s->status == FINISH_STATE && strm->avail_in != 0) {
         ERR_RETURN(strm, Z_BUF_ERROR);
     }
-
+    
+    #ifdef ISAL_INSTALLED
+    if (s->status != GZIP_STATE)
+        s->status = BUSY_STATE;
+    #endif
     /* Write the header */
     if (s->status == INIT_STATE) {
         /* zlib header */
@@ -1032,6 +1017,27 @@ int ZEXPORT deflate (strm, flush)
     }
 #endif
 
+    #ifdef ISAL_INSTALLED
+    struct isal_zstream *isal_s = strm->internal_stream;
+    isal_s->next_out = strm->next_out;
+    isal_s->avail_out = strm->avail_out;
+    isal_s->next_in = strm->next_in;
+    isal_s->avail_in = strm->avail_in;
+    isal_s->end_of_stream = 1;
+    
+    isal_deflate(isal_s);
+    strm->next_out = isal_s->next_out;
+    strm->avail_out = isal_s->avail_out; 
+    strm->next_in = isal_s->next_in; 
+    strm->avail_in = isal_s->avail_in;
+    strm->total_out = isal_s->total_out;
+    strm->internal_stream = isal_s;
+    if (isal_s->internal_state.state != ZSTATE_END)
+        return Z_OK;
+    s->status = FINISH_STATE;
+    return Z_STREAM_END;
+#endif
+
     /* Start a new block or continue the current one.
      */
     if (strm->avail_in != 0 || s->lookahead != 0 ||
@@ -1117,9 +1123,9 @@ int ZEXPORT deflate (strm, flush)
 int ZEXPORT deflateEnd (strm)
     z_streamp strm;
 {
-#ifdef ISAL_INSTALLED
-    return Z_OK;
-#endif
+// #ifdef ISAL_INSTALLED
+//     return Z_OK;
+// #endif
 
     int status;
 

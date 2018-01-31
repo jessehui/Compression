@@ -119,6 +119,8 @@ void test_gzio(fname, uncompr, uncomprLen)
 #ifdef NO_GZCOMPRESS
     fprintf(stderr, "NO_GZCOMPRESS -- gz* functions cannot compress\n");
 #else
+
+    printf("file name:%s, uncompr: %s, uncomprLen: %d\n",fname, uncompr, uncomprLen);
     int err;
     int len = (int)strlen(hello)+1;
     gzFile file;
@@ -148,6 +150,7 @@ void test_gzio(fname, uncompr, uncomprLen)
     }
     strcpy((char*)uncompr, "garbage");
 
+    printf("2. uncompr: %s, uncomprLen: %d, len = %d\n", uncompr, uncomprLen, len);
     if (gzread(file, uncompr, (unsigned)uncomprLen) != len) {
         fprintf(stderr, "gzread err: %s\n", gzerror(file, &err));
         exit(1);
@@ -576,14 +579,22 @@ int main(argc, argv)
     (void)argc;
     (void)argv;
 #else
+  //  #undef ISAL_INSTALLED
     test_compress(compr, comprLen, uncompr, uncomprLen);
+  //  #define ISAL_INSTALLED
     #ifdef ISAL_INSTALLED
     printf("Compress Done for ISA-L Test. \n");
-    return 0;   // Test done here
+    //return 0;   // Test done here
+    #endif
+
+    #ifdef GZIP
+    printf("GZIP defined\n");
     #endif
 
     test_gzio((argc > 1 ? argv[1] : TESTFILE),
               uncompr, uncomprLen);
+    printf("Test gzio done.\n");
+    return 0;
 #endif
 
     test_deflate(compr, comprLen);
