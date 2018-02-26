@@ -89,10 +89,7 @@ int ZEXPORT uncompress (dest, destLen, source, sourceLen)
     const Bytef *source;
     uLong sourceLen;
 {
-#ifdef ISAL_INSTALLED
-    source = source + 2;
-    sourceLen = sourceLen - 2 - 4;
-#endif
+//
 
     return uncompress2(dest, destLen, source, &sourceLen);
 }

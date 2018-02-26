@@ -307,11 +307,41 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
         if (isal_s == Z_NULL) return Z_MEM_ERROR;
 
         isal_deflate_init(isal_s);
-        isal_s->level = 1;
-        isal_s->gzip_flag = IGZIP_ZLIB;
+        
+        isal_s->gzip_flag = IGZIP_DEFLATE;
         isal_s->avail_in = stream_size;
-        isal_s->level_buf = malloc(ISAL_DEF_LVL1_DEFAULT);
-        isal_s->level_buf_size = ISAL_DEF_LVL1_DEFAULT;
+        switch (level) {
+            case 0:
+            isal_s->level = 0;
+            isal_s->level_buf = malloc(ISAL_DEF_LVL0_DEFAULT);
+            isal_s->level_buf_size = ISAL_DEF_LVL0_DEFAULT;
+            break;
+            case 1:
+            isal_s->level = 1;
+            isal_s->level_buf = malloc(ISAL_DEF_LVL1_DEFAULT);
+            isal_s->level_buf_size = ISAL_DEF_LVL1_DEFAULT;
+            break;
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            isal_s->level = 2;
+            isal_s->level_buf = malloc(ISAL_DEF_LVL2_DEFAULT);
+            isal_s->level_buf_size = ISAL_DEF_LVL2_DEFAULT;
+            break;
+            case 7:
+            case 8:
+            case 9:
+            isal_s->level = 3;
+            isal_s->level_buf = malloc(ISAL_DEF_LVL3_DEFAULT);
+            isal_s->level_buf_size = ISAL_DEF_LVL3_DEFAULT;
+            break;
+            default:
+            isal_s->level = 1;
+            isal_s->level_buf = malloc(ISAL_DEF_LVL1_DEFAULT);
+            isal_s->level_buf_size = ISAL_DEF_LVL1_DEFAULT;
+        }
+
         if (isal_s->level_buf == 0) {
             puts("Failed to allocate level compression buffer\n");
             exit(0);
@@ -1017,13 +1047,26 @@ int ZEXPORT deflate (strm, flush)
     }
 #endif
 
+    if(flush == Z_PARTIAL_FLUSH || flush == Z_BLOCK || flush == Z_TREES)
+        goto _next_;
+    if(s->strategy != Z_DEFAULT_STRATEGY)
+        goto _next_;
+
     #ifdef ISAL_INSTALLED
     struct isal_zstream *isal_s = strm->internal_stream;
+    switch (flush) {
+        case Z_NO_FLUSH: isal_s->flush = NO_FLUSH; break;
+        case Z_SYNC_FLUSH: isal_s->flush = SYNC_FLUSH; break;
+        case Z_FULL_FLUSH: isal_s->flush = FULL_FLUSH; break;
+        case Z_FINISH: isal_s->flush = FINISH_FLUSH; break;
+        default: isal_s->flush = NO_FLUSH;
+    }
     isal_s->next_out = strm->next_out;
     isal_s->avail_out = strm->avail_out;
     isal_s->next_in = strm->next_in;
     isal_s->avail_in = strm->avail_in;
-    isal_s->end_of_stream = 1;
+    if(strm->avail_in == 0)
+        isal_s->end_of_stream = 1;
     
     isal_deflate(isal_s);
     strm->next_out = isal_s->next_out;
@@ -1031,8 +1074,32 @@ int ZEXPORT deflate (strm, flush)
     strm->next_in = isal_s->next_in; 
     strm->avail_in = isal_s->avail_in;
     strm->total_out = isal_s->total_out;
+    strm->total_in = isal_s->total_in;
     strm->internal_stream = isal_s;
-    if (isal_s->internal_state.state != ZSTATE_END)
+
+    if (flush == Z_FULL_FLUSH || flush == Z_SYNC_FLUSH) { /* FULL_FLUSH or SYNC_FLUSH */
+        _tr_stored_block(s, (char*)0, 0L, 0);
+            /* For a full flush, this empty block will be recognized
+             * as a special marker by inflate_sync().
+             */
+        if (flush == Z_FULL_FLUSH) {
+               CLEAR_HASH(s);             /* forget history */
+               if (s->lookahead == 0) {
+                   s->strstart = 0;
+                   s->block_start = 0L;
+                   s->insert = 0;
+               }
+        }
+    }
+
+    flush_pending(strm);
+    if (strm->avail_out == 0) {
+        s->last_flush = -1; /* avoid BUF_ERROR at next call, see above */
+        return Z_OK;
+    }
+    
+    if ((isal_s->internal_state.state != ZSTATE_END) ||
+         (flush == Z_NO_FLUSH) )
         return Z_OK;
     s->status = FINISH_STATE;
     return Z_STREAM_END;
@@ -1040,6 +1107,7 @@ int ZEXPORT deflate (strm, flush)
 
     /* Start a new block or continue the current one.
      */
+_next_:
     if (strm->avail_in != 0 || s->lookahead != 0 ||
         (flush != Z_NO_FLUSH && s->status != FINISH_STATE)) {
         block_state bstate;
@@ -1123,9 +1191,9 @@ int ZEXPORT deflate (strm, flush)
 int ZEXPORT deflateEnd (strm)
     z_streamp strm;
 {
-// #ifdef ISAL_INSTALLED
-//     return Z_OK;
-// #endif
+ #ifdef ISAL_INSTALLED
+     return Z_OK;
+ #endif
 
     int status;
 

@@ -235,7 +235,10 @@ int stream_size;
 
     isal_inflate_init(isal_istate);
     isal_istate->next_in = strm->next_in;
+    isal_istate->next_out = strm->next_out;
+    //isal_istate->crc_flag = IGZIP_ZLIB;
     strm->state = (struct internal_state FAR *)isal_istate;
+    strm->total_in = strm->total_out = 0;
     return Z_OK;    
 #endif
 
@@ -671,6 +674,8 @@ int flush;
     istate->next_out = NULL;
     istate->avail_in = 0;
     istate->avail_out = 0;
+    //istate->total_out = strm->total_out;
+    //compress_len = 0;
 
     while (1) {
         if (istate->avail_in == 0) {
@@ -697,6 +702,7 @@ int flush;
 
                 istate->next_in = comp_tmp;
                 istate->avail_in = comp_tmp_size;
+                
             }
         }
 
@@ -732,8 +738,10 @@ int flush;
                 istate->next_out = uncomp_tmp;
             }
         }
-    
+        
         ret = isal_inflate(istate);
+        printf("istate->total_out = %d\n", istate->total_out);
+        istate->read_in_length += comp_tmp_size;
 
         if (istate->block_state == ISAL_BLOCK_FINISH || ret != 0) {
             memcpy(uncompress_buf + uncomp_processed, uncomp_tmp, uncomp_tmp_size);
@@ -746,6 +754,8 @@ int flush;
     strm->next_in = istate->next_in;
     strm->avail_in = istate->avail_in;
     strm->avail_out = istate->avail_out;
+    strm->total_out = istate->total_out;
+    //strm->total_in = istate->total_in;
 
     if (comp_tmp != NULL) {
         free(comp_tmp);
@@ -1408,6 +1418,10 @@ int flush;
 int ZEXPORT inflateEnd(strm)
 z_streamp strm;
 {
+    #ifdef ISAL_INSTALLED
+    return Z_OK;
+    #endif
+    
     struct inflate_state FAR *state;
     if (inflateStateCheck(strm))
         return Z_STREAM_ERROR;
