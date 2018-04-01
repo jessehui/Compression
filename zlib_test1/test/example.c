@@ -126,6 +126,8 @@ void test_gzio(fname, uncompr, uncomprLen)
     gzFile file;
     z_off_t pos;
 
+    //goto test__;
+
     file = gzopen(fname, "wb");
     if (file == NULL) {
         fprintf(stderr, "gzopen error\n");
@@ -142,6 +144,9 @@ void test_gzio(fname, uncompr, uncomprLen)
     }
     gzseek(file, 1L, SEEK_CUR); /* add one zero byte */
     gzclose(file);
+
+    //return;
+test__:
 
     file = gzopen(fname, "rb");
     if (file == NULL) {
@@ -591,15 +596,16 @@ int main(argc, argv)
     printf("Compress Done for ISA-L Test. \n");
     //return 0;   // Test done here
     #endif
+   // return 0;
 
     #ifdef GZIP
     printf("GZIP defined\n");
     #endif
 
-    //test_gzio((argc > 1 ? argv[1] : TESTFILE),
-    //          uncompr, uncomprLen);
+    test_gzio((argc > 1 ? argv[1] : TESTFILE),
+              uncompr, uncomprLen);
     printf("Test gzio done.\n");
-    //return 0;
+    return 0;
 #endif
 
     printf("2. compr=%s, comprLen=%d\n", compr, comprLen);

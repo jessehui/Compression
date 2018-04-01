@@ -371,83 +371,83 @@ void print_uint8_t(uint8_t * array, uint64_t length)
 	printf("\n");
 }
 
-uint32_t check_gzip_header(uint8_t * z_buf)
-{
-	/* These values are defined in RFC 1952 page 4 */
-	const uint8_t ID1 = 0x1f, ID2 = 0x8b, CM = 0x08, FLG = 0;
-	uint32_t ret = 0;
-	int i;
-	/* Verify that the gzip header is the one used in hufftables_c.c */
-	for (i = 0; i < gzip_hdr_bytes; i++)
-		if (z_buf[i] != gzip_hdr[i])
-			ret = INVALID_GZIP_HEADER;
+// uint32_t check_gzip_header(uint8_t * z_buf)
+// {
+// 	/* These values are defined in RFC 1952 page 4 */
+// 	const uint8_t ID1 = 0x1f, ID2 = 0x8b, CM = 0x08, FLG = 0;
+// 	uint32_t ret = 0;
+// 	int i;
+// 	/* Verify that the gzip header is the one used in hufftables_c.c */
+// 	for (i = 0; i < gzip_hdr_bytes; i++)
+// 		if (z_buf[i] != gzip_hdr[i])
+// 			ret = INVALID_GZIP_HEADER;
 
-	/* Verify that the gzip header is a valid gzip header */
-	if (*z_buf++ != ID1)
-		ret = INVALID_GZIP_HEADER;
+// 	/* Verify that the gzip header is a valid gzip header */
+// 	if (*z_buf++ != ID1)
+// 		ret = INVALID_GZIP_HEADER;
 
-	if (*z_buf++ != ID2)
-		ret = INVALID_GZIP_HEADER;
+// 	if (*z_buf++ != ID2)
+// 		ret = INVALID_GZIP_HEADER;
 
-	/* Verfiy compression method is Deflate */
-	if (*z_buf++ != CM)
-		ret = INVALID_GZIP_HEADER;
+// 	/* Verfiy compression method is Deflate */
+// 	if (*z_buf++ != CM)
+// 		ret = INVALID_GZIP_HEADER;
 
-	/* The following comparison is specific to how gzip headers are written in igzip */
-	/* Verify no extra flags are set */
-	if (*z_buf != FLG)
-		ret = INVALID_GZIP_HEADER;
+// 	/* The following comparison is specific to how gzip headers are written in igzip */
+// 	/* Verify no extra flags are set */
+// 	if (*z_buf != FLG)
+// 		ret = INVALID_GZIP_HEADER;
 
-	/* The last 6 bytes in the gzip header do not contain any information
-	 * important to decomrpessing the data */
+// 	/* The last 6 bytes in the gzip header do not contain any information
+// 	 * important to decomrpessing the data */
 
-	return ret;
-}
+// 	return ret;
+// }
 
-uint32_t check_zlib_header(uint8_t * z_buf)
-{
-	/* These values are defined in RFC 1952 page 4 */
-	uint32_t ret = 0;
-	int i;
-	/* Verify that the gzip header is the one used in hufftables_c.c */
-	for (i = 0; i < zlib_hdr_bytes; i++)
-		if (z_buf[i] != zlib_hdr[i])
-			ret = INVALID_ZLIB_HEADER;
-	return ret;
-}
+// uint32_t check_zlib_header(uint8_t * z_buf)
+// {
+// 	 These values are defined in RFC 1952 page 4 
+// 	uint32_t ret = 0;
+// 	int i;
+// 	/* Verify that the gzip header is the one used in hufftables_c.c */
+// 	for (i = 0; i < zlib_hdr_bytes; i++)
+// 		if (z_buf[i] != zlib_hdr[i])
+// 			ret = INVALID_ZLIB_HEADER;
+// 	return ret;
+// }
 
-uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncompress_buf,
-			uint32_t uncompress_len)
-{
-	uint64_t trl, ret = 0;
-	uint32_t crc;
+// uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncompress_buf,
+// 			uint32_t uncompress_len)
+// {
+// 	uint64_t trl, ret = 0;
+// 	uint32_t crc;
 
-	crc = crc32_gzip_refl_ref(0, uncompress_buf, uncompress_len);
-	trl = ((uint64_t) uncompress_len << 32) | crc;
+// 	crc = crc32_gzip_refl_ref(0, uncompress_buf, uncompress_len);
+// 	trl = ((uint64_t) uncompress_len << 32) | crc;
 
-	if (crc != inflate_crc || trl != gzip_trl)
-		ret = INCORRECT_GZIP_TRAILER;
+// 	if (crc != inflate_crc || trl != gzip_trl)
+// 		ret = INCORRECT_GZIP_TRAILER;
 
-	return ret;
-}
+// 	return ret;
+// }
 
-uint32_t check_zlib_trl(uint32_t zlib_trl, uint32_t inflate_adler, uint8_t * uncompress_buf,
-			uint32_t uncompress_len)
-{
-	uint32_t trl, ret = 0;
-	uint32_t adler;
+// uint32_t check_zlib_trl(uint32_t zlib_trl, uint32_t inflate_adler, uint8_t * uncompress_buf,
+// 			uint32_t uncompress_len)
+// {
+// 	uint32_t trl, ret = 0;
+// 	uint32_t adler;
 
-	adler = adler_ref(1, uncompress_buf, uncompress_len);
+// 	adler = adler_ref(1, uncompress_buf, uncompress_len);
 
-	trl =
-	    (adler >> 24) | ((adler >> 8) & 0xFF00) | (adler << 24) | ((adler & 0xFF00) << 8);
+// 	trl =
+// 	    (adler >> 24) | ((adler >> 8) & 0xFF00) | (adler << 24) | ((adler & 0xFF00) << 8);
 
-	if (adler != inflate_adler || trl != zlib_trl) {
-		ret = INCORRECT_ZLIB_TRAILER;
-	}
+// 	if (adler != inflate_adler || trl != zlib_trl) {
+// 		ret = INCORRECT_ZLIB_TRAILER;
+// 	}
 
-	return ret;
-}
+// 	return ret;
+// }
 
 int inflate_stateless_pass(uint8_t * compress_buf, uint64_t compress_len,
 			   uint8_t * uncompress_buf, uint32_t * uncompress_len,

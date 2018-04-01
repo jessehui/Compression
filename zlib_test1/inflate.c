@@ -98,6 +98,13 @@
 #  endif
 #endif
 
+static const uint32_t gzip_hdr_bytes = 10;
+static const uint32_t zlib_hdr_bytes = 2;
+static const uint32_t gzip_trl_bytes = 8;
+static const uint32_t zlib_trl_bytes = 4;
+static const int gzip_extra_bytes = 18;	/* gzip_hdr_bytes + gzip_trl_bytes */
+static const int zlib_extra_bytes = 6;	/* zlib_hdr_bytes + zlib_trl_bytes */
+
 /* function prototypes */
 local int inflateStateCheck OF((z_streamp strm));
 local void fixedtables OF((struct inflate_state FAR *state));
@@ -236,10 +243,12 @@ int stream_size;
     isal_inflate_init(isal_istate);
     isal_istate->next_in = strm->next_in;
     isal_istate->next_out = strm->next_out;
-    //isal_istate->crc_flag = IGZIP_ZLIB;
-    strm->state = (struct internal_state FAR *)isal_istate;
+    if(windowBits > 15)
+        isal_istate->crc_flag = IGZIP_GZIP;
+    
+    strm->isal_inflate_state = isal_istate;
     strm->total_in = strm->total_out = 0;
-    return Z_OK;    
+    //return Z_OK;
 #endif
 
     state = (struct inflate_state FAR *)
@@ -669,86 +678,135 @@ int flush;
     uint8_t * uncompress_buf = strm->next_out;
     uint32_t * uncompress_len = &(strm->avail_out);
 
-    struct isal_inflate_state *istate = (struct isal_inflate_state *)strm->state;
-    istate->next_in = NULL;
-    istate->next_out = NULL;
-    istate->avail_in = 0;
-    istate->avail_out = 0;
-    //istate->total_out = strm->total_out;
+    struct isal_inflate_state *istate = strm->isal_inflate_state;
+    int gzip_hdr_result = 0, gzip_trl_result = 0;
+    int gzip_flag = istate->crc_flag;
+    
+    istate->next_in = strm->next_in;
+    istate->next_out = strm->next_out;
+    istate->avail_in = strm->avail_in;
+    istate->avail_out = strm->avail_out;
+    istate->total_out = strm->total_out;
     //compress_len = 0;
 
-    while (1) {
-        if (istate->avail_in == 0) {
-            comp_tmp_size = rand() % (compress_len + 1);
+    if (istate->crc_flag == IGZIP_GZIP) {
+        gzip_hdr_result = check_gzip_header(istate->next_in);
+        istate->next_in += gzip_hdr_bytes;
+        istate->avail_in -= gzip_hdr_bytes;
+    } else if (istate->crc_flag == IGZIP_ZLIB) {
+        gzip_hdr_result = check_zlib_header(istate->next_in);
+        istate->next_in += zlib_hdr_bytes;
+        istate->avail_in -= zlib_hdr_bytes;
+    }
+        //istate->next_in = comp_tmp;
+        //istate->avail_in = comp_tmp_size;
 
-            if (comp_tmp_size >= compress_len - comp_processed)
-                comp_tmp_size = compress_len - comp_processed;
+    
 
-            if (comp_tmp_size != 0) {
-                if (comp_tmp != NULL) {
-                    free(comp_tmp);
-                    comp_tmp = NULL;
-                }
+    #ifdef GUNZIP
+    printf("inflate: GUNZIP Defined\n");
+    #endif
 
-                comp_tmp = malloc(comp_tmp_size);
+    ret = isal_inflate_stateless(istate);
 
-                if (comp_tmp == NULL) {
-                    puts("Failed to allocate memory\n");
-                    exit(0);
-                }
+    strm->total_out = istate->total_out;
 
-                memcpy(comp_tmp, compress_buf + comp_processed, comp_tmp_size);
-                comp_processed += comp_tmp_size;
+    if (gzip_flag) {
+        if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR) {
+            if (!ret)
+                ret =
+                    check_gzip_trl(*(uint64_t *) istate->next_in, istate->crc,
+                           strm->next_out, strm->avail_out);
+            istate->avail_in -= gzip_trl_bytes;
+        } else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR) {
+            if (!ret)
+                ret =
+                    check_zlib_trl(*(uint32_t *) istate->next_in, istate->crc,
+                           strm->next_out, strm->avail_out);
+            istate->avail_in -= zlib_trl_bytes;
 
-                istate->next_in = comp_tmp;
-                istate->avail_in = comp_tmp_size;
+        }
+
+    }
+
+    if (ret == 0 && istate->avail_in != 0)
+        ret = ISAL_DECOMP_OK;
+
+
+    // while (1) {
+    //     if (istate->avail_in == 0) {
+    //         comp_tmp_size = rand() % (compress_len + 1);
+
+    //         if (comp_tmp_size >= compress_len - comp_processed)
+    //             comp_tmp_size = compress_len - comp_processed;
+
+    //         if (comp_tmp_size != 0) {
+    //             if (comp_tmp != NULL) {
+    //                 free(comp_tmp);
+    //                 comp_tmp = NULL;
+    //             }
+
+    //             comp_tmp = malloc(comp_tmp_size);
+
+    //             if (comp_tmp == NULL) {
+    //                 puts("Failed to allocate memory\n");
+    //                 exit(0);
+    //             }
+
+    //             memcpy(comp_tmp, compress_buf + comp_processed, comp_tmp_size);
+    //             comp_processed += comp_tmp_size;
+
+    //             istate->next_in = comp_tmp;
+    //             istate->avail_in = comp_tmp_size;
                 
-            }
-        }
+    //         }
+    //     }
 
-        if (istate->avail_out == 0) {
-            // Save uncompressed data into uncompress_buf 
-            if (uncomp_tmp != NULL) {
-                memcpy(uncompress_buf + uncomp_processed, uncomp_tmp,
-                       uncomp_tmp_size);
-                uncomp_processed += uncomp_tmp_size;
-            }
+    //     if (istate->avail_out == 0) {
+    //         // Save uncompressed data into uncompress_buf 
+    //         if (uncomp_tmp != NULL) {
+    //             memcpy(uncompress_buf + uncomp_processed, uncomp_tmp,
+    //                    uncomp_tmp_size);
+    //             uncomp_processed += uncomp_tmp_size;
+    //         }
 
-            uncomp_tmp_size = rand() % (*uncompress_len + 1);
+    //         uncomp_tmp_size = rand() % (*uncompress_len + 1);
 
-            /* Limit size of buffer to be smaller than maximum */
-            if (uncomp_tmp_size > *uncompress_len - uncomp_processed)
-                uncomp_tmp_size = *uncompress_len - uncomp_processed;
+    //         /* Limit size of buffer to be smaller than maximum */
+    //         if (uncomp_tmp_size > *uncompress_len - uncomp_processed)
+    //             uncomp_tmp_size = *uncompress_len - uncomp_processed;
 
-            if (uncomp_tmp_size != 0) {
+    //         if (uncomp_tmp_size != 0) {
 
-                if (uncomp_tmp != NULL) {
-                    fflush(0);
-                    free(uncomp_tmp);
-                    uncomp_tmp = NULL;
-                }
+    //             if (uncomp_tmp != NULL) {
+    //                 fflush(0);
+    //                 free(uncomp_tmp);
+    //                 uncomp_tmp = NULL;
+    //             }
 
-                uncomp_tmp = malloc(uncomp_tmp_size);
-                if (uncomp_tmp == NULL) {
-                    puts("Failed to allocate memory\n");
-                    exit(0);
-                }
+    //             uncomp_tmp = malloc(uncomp_tmp_size);
+    //             if (uncomp_tmp == NULL) {
+    //                 puts("Failed to allocate memory\n");
+    //                 exit(0);
+    //             }
 
-                istate->avail_out = uncomp_tmp_size;
-                istate->next_out = uncomp_tmp;
-            }
-        }
+    //             istate->avail_out = uncomp_tmp_size;
+    //             istate->next_out = uncomp_tmp;
+    //         }
+    //     }
+
         
-        ret = isal_inflate(istate);
-        printf("istate->total_out = %d\n", istate->total_out);
-        istate->read_in_length += comp_tmp_size;
+    //     ret = isal_inflate(istate);
 
-        if (istate->block_state == ISAL_BLOCK_FINISH || ret != 0) {
-            memcpy(uncompress_buf + uncomp_processed, uncomp_tmp, uncomp_tmp_size);
-            *uncompress_len = istate->total_out;
-            break;
-        }
-    }   //end while 1
+    //     printf("istate->total_out = %d\n", istate->total_out);
+    //     istate->read_in_length += comp_tmp_size;
+
+    //     if (istate->block_state == ISAL_BLOCK_FINISH || ret != 0) {
+    //         memcpy(uncompress_buf + uncomp_processed, uncomp_tmp, uncomp_tmp_size);
+    //         *uncompress_len = istate->total_out;
+    //         break;
+    //     }
+    // }   //end while 1
 
     strm->next_out = istate->next_out;
     strm->next_in = istate->next_in;
@@ -757,16 +815,16 @@ int flush;
     strm->total_out = istate->total_out;
     //strm->total_in = istate->total_in;
 
-    if (comp_tmp != NULL) {
-        free(comp_tmp);
-        comp_tmp = NULL;
-    }
-    if (uncomp_tmp != NULL) {
-        free(uncomp_tmp);
-        uncomp_tmp = NULL;
-    }
+    // if (comp_tmp != NULL) {
+    //     free(comp_tmp);
+    //     comp_tmp = NULL;
+    // }
+    // if (uncomp_tmp != NULL) {
+    //     free(uncomp_tmp);
+    //     uncomp_tmp = NULL;
+    // }
 
-    free(istate);
+    // //free(istate);
 
     if (ret == ISAL_DECOMP_OK)
         return Z_STREAM_END;
@@ -1419,6 +1477,7 @@ int ZEXPORT inflateEnd(strm)
 z_streamp strm;
 {
     #ifdef ISAL_INSTALLED
+    
     return Z_OK;
     #endif
     

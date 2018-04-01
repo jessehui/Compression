@@ -257,6 +257,10 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
      * output size for (length,distance) codes is <= 24 bits.
      */
 
+    #ifdef GZIP
+        printf("Deflate: GZIP Defined\n");
+    #endif
+
     if (version == Z_NULL || version[0] != my_version[0] ||
         stream_size != sizeof(z_stream)) {
         return Z_VERSION_ERROR;
@@ -309,6 +313,13 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
         isal_deflate_init(isal_s);
         
         isal_s->gzip_flag = IGZIP_DEFLATE;
+      	if (wrap == 2) //wrap bit 0: 1 for zlib, wrap bit 1: 1 for gzip
+        {
+            isal_s->gzip_flag = IGZIP_GZIP_NO_HDR;
+            //isal_s->avail_out += 8;
+        }
+
+        
         isal_s->avail_in = stream_size;
         switch (level) {
             case 0:
@@ -559,7 +570,7 @@ int ZEXPORT deflateReset (strm)
     z_streamp strm;
 {
     int ret;
-
+    printf("deflate Reset\n");
     ret = deflateResetKeep(strm);
     if (ret == Z_OK)
         lm_init(strm->state);
@@ -1068,7 +1079,7 @@ int ZEXPORT deflate (strm, flush)
     if(strm->avail_in == 0)
         isal_s->end_of_stream = 1;
     
-    isal_deflate(isal_s);
+    isal_deflate_stateless(isal_s);
     strm->next_out = isal_s->next_out;
     strm->avail_out = isal_s->avail_out; 
     strm->next_in = isal_s->next_in; 

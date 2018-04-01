@@ -31,6 +31,8 @@
 #include "igzip_lib.h"
 #include "huff_codes.h"
 #include "igzip_checksums.h"
+#include "checksum_test_ref.h"
+
 
 extern int decode_huffman_code_block_stateless(struct inflate_state *);
 
@@ -1365,3 +1367,140 @@ int isal_inflate(struct inflate_state *state)
 
 	return ISAL_DECOMP_OK;
 }
+
+static const int hdr_bytes = 300;
+
+static const uint8_t gzip_hdr[10] = {
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0xff
+};
+
+static const uint8_t zlib_hdr[2] = {
+	0x78, 0x01
+};
+
+/* Defines for the possible error conditions */
+enum IGZIP_TEST_ERROR_CODES {
+	IGZIP_COMP_OK,
+
+	MALLOC_FAILED,
+	FILE_READ_FAILED,
+
+	COMPRESS_INCORRECT_STATE,
+	COMPRESS_INPUT_STREAM_INTEGRITY_ERROR,
+	COMPRESS_OUTPUT_STREAM_INTEGRITY_ERROR,
+	COMPRESS_END_OF_STREAM_NOT_SET,
+	COMPRESS_ALL_INPUT_FAIL,
+	COMPRESS_OUT_BUFFER_OVERFLOW,
+	COMPRESS_LOOP_COUNT_OVERFLOW,
+	COMPRESS_GENERAL_ERROR,
+
+	INFLATE_END_OF_INPUT,
+	INFLATE_INVALID_BLOCK_HEADER,
+	INFLATE_INVALID_SYMBOL,
+	INFLATE_OUT_BUFFER_OVERFLOW,
+	INFLATE_LEFTOVER_INPUT,
+	INFLATE_INCORRECT_OUTPUT_SIZE,
+	INFLATE_INVALID_LOOK_BACK_DISTANCE,
+	INFLATE_INPUT_STREAM_INTEGRITY_ERROR,
+	INFLATE_OUTPUT_STREAM_INTEGRITY_ERROR,
+	INVALID_GZIP_HEADER,
+	INCORRECT_GZIP_TRAILER,
+	INVALID_ZLIB_HEADER,
+	INCORRECT_ZLIB_TRAILER,
+
+	INFLATE_GENERAL_ERROR,
+
+	INVALID_FLUSH_ERROR,
+
+	OVERFLOW_TEST_ERROR,
+	RESULT_ERROR
+};
+
+
+static const uint32_t gzip_hdr_bytes = 10;
+static const uint32_t zlib_hdr_bytes = 2;
+static const uint32_t gzip_trl_bytes = 8;
+static const uint32_t zlib_trl_bytes = 4;
+static const int gzip_extra_bytes = 18;	/* gzip_hdr_bytes + gzip_trl_bytes */
+static const int zlib_extra_bytes = 6;	/* zlib_hdr_bytes + zlib_trl_bytes */
+
+
+uint32_t check_gzip_header(uint8_t * z_buf)
+{
+	/* These values are defined in RFC 1952 page 4 */
+	const uint8_t ID1 = 0x1f, ID2 = 0x8b, CM = 0x08, FLG = 0;
+	uint32_t ret = 0;
+	int i;
+	/* Verify that the gzip header is the one used in hufftables_c.c */
+	for (i = 0; i < gzip_hdr_bytes; i++)
+		if (z_buf[i] != gzip_hdr[i])
+			ret = INVALID_GZIP_HEADER;
+
+	/* Verify that the gzip header is a valid gzip header */
+	if (*z_buf++ != ID1)
+		ret = INVALID_GZIP_HEADER;
+
+	if (*z_buf++ != ID2)
+		ret = INVALID_GZIP_HEADER;
+
+	/* Verfiy compression method is Deflate */
+	if (*z_buf++ != CM)
+		ret = INVALID_GZIP_HEADER;
+
+	/* The following comparison is specific to how gzip headers are written in igzip */
+	/* Verify no extra flags are set */
+	if (*z_buf != FLG)
+		ret = INVALID_GZIP_HEADER;
+
+	/* The last 6 bytes in the gzip header do not contain any information
+	 * important to decomrpessing the data */
+
+	return ret;
+}
+
+uint32_t check_zlib_header(uint8_t * z_buf)
+{
+	/* These values are defined in RFC 1952 page 4 */
+	uint32_t ret = 0;
+	int i;
+	/* Verify that the gzip header is the one used in hufftables_c.c */
+	for (i = 0; i < zlib_hdr_bytes; i++)
+		if (z_buf[i] != zlib_hdr[i])
+			ret = INVALID_ZLIB_HEADER;
+	return ret;
+}
+
+uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncompress_buf,
+			uint32_t uncompress_len)
+{
+	uint64_t trl, ret = 0;
+	uint32_t crc;
+
+	crc = crc32_gzip_refl_ref(0, uncompress_buf, uncompress_len);
+	trl = ((uint64_t) uncompress_len << 32) | crc;
+
+	if (crc != inflate_crc || trl != gzip_trl)
+		ret = INCORRECT_GZIP_TRAILER;
+
+	return ret;
+}
+
+uint32_t check_zlib_trl(uint32_t zlib_trl, uint32_t inflate_adler, uint8_t * uncompress_buf,
+			uint32_t uncompress_len)
+{
+	uint32_t trl, ret = 0;
+	uint32_t adler;
+
+	adler = adler_ref(1, uncompress_buf, uncompress_len);
+
+	trl =
+	    (adler >> 24) | ((adler >> 8) & 0xFF00) | (adler << 24) | ((adler & 0xFF00) << 8);
+
+	if (adler != inflate_adler || trl != zlib_trl) {
+		ret = INCORRECT_ZLIB_TRAILER;
+	}
+
+	return ret;
+}
+

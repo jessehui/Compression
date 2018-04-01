@@ -107,7 +107,7 @@ local int gz_look(state)
             return -1;
         }
         state->size = state->want;
-
+        //memset(state->in, NULL, state->want);
         /* allocate inflate memory */
         state->strm.zalloc = Z_NULL;
         state->strm.zfree = Z_NULL;
