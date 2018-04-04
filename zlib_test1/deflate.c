@@ -313,10 +313,13 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
         isal_deflate_init(isal_s);
         
         isal_s->gzip_flag = IGZIP_DEFLATE;
-      	if (wrap == 2) //wrap bit 0: 1 for zlib, wrap bit 1: 1 for gzip
-        {
+      	if (wrap == 2) {
             isal_s->gzip_flag = IGZIP_GZIP_NO_HDR;
             //isal_s->avail_out += 8;
+        }
+        else if (wrap == 0) {
+            isal_s->gzip_flag = IGZIP_ZLIB_NO_HDR;
+    
         }
 
         
@@ -874,7 +877,9 @@ int ZEXPORT deflate (strm, flush)
     }
     
     #ifdef ISAL_INSTALLED
-    if (s->status != GZIP_STATE)
+    if (s->status == FINISH_STATE)
+        return Z_STREAM_END;
+    else if (s->status != GZIP_STATE)
         s->status = BUSY_STATE;
     #endif
     /* Write the header */
@@ -1079,7 +1084,7 @@ int ZEXPORT deflate (strm, flush)
     if(strm->avail_in == 0)
         isal_s->end_of_stream = 1;
     
-    isal_deflate_stateless(isal_s);
+    isal_deflate(isal_s);
     strm->next_out = isal_s->next_out;
     strm->avail_out = isal_s->avail_out; 
     strm->next_in = isal_s->next_in; 
@@ -1110,10 +1115,12 @@ int ZEXPORT deflate (strm, flush)
     }
     
     if ((isal_s->internal_state.state != ZSTATE_END) ||
-         (flush == Z_NO_FLUSH) )
+        (flush == Z_NO_FLUSH))
+        // (isal_s->avail_in = 0) )
         return Z_OK;
     s->status = FINISH_STATE;
     return Z_STREAM_END;
+    goto _trailer_;
 #endif
 
     /* Start a new block or continue the current one.
@@ -1172,6 +1179,7 @@ _next_:
     if (flush != Z_FINISH) return Z_OK;
     if (s->wrap <= 0) return Z_STREAM_END;
 
+_trailer_:
     /* Write the trailer */
 #ifdef GZIP
     if (s->wrap == 2) {
