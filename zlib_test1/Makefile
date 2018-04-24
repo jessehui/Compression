@@ -18,12 +18,12 @@
 
 CC=gcc
 
-CFLAGS=-g -DZLIB_DEBUG -DZLIB_DEBUG -DISAL_INSTALLED -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+CFLAGS= -g3 -gdwarf-2 -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -DISAL_INSTALLED 
 #CFLAGS=-O -DMAX_WBITS=14 -DMAX_MEM_LEVEL=7
 #CFLAGS=-
 #CFLAGS=-O3 -Wall -Wwrite-strings -Wpointer-arith -Wconversion \
 #           -Wstrict-prototypes -Wmissing-prototypes
-SFLAGS=-g -fPIC -DZLIB_DEBUG -DISAL_INSTALLED -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN
+SFLAGS= -g -fPIC -D_LARGEFILE64_SOURCE=1 -DHAVE_HIDDEN -DISAL_INSTALLED
 LDFLAGS=
 TEST_LDFLAGS=libz.a isa-l_pub/.libs/libisal.a
 LDSHARED=gcc -shared -Wl,-soname,libz.so.1,--version-script,zlib.map

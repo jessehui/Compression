@@ -1,10 +1,11 @@
-igzip/igzip_base.lo: igzip/igzip_base.c /usr/include/stdc-predef.h \
- /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/stdint.h \
- /usr/include/stdint.h /usr/include/features.h /usr/include/sys/cdefs.h \
+igzip/huff_codes.lo: igzip/huff_codes.c /usr/include/stdc-predef.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/immintrin.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/mmintrin.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/xmmintrin.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/mm_malloc.h \
+ /usr/include/stdlib.h /usr/include/features.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
- /usr/include/gnu/stubs-64.h /usr/include/bits/wchar.h \
- include/igzip_lib.h include/types.h igzip/huffman.h \
- /usr/include/stdlib.h \
+ /usr/include/gnu/stubs-64.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/stddef.h \
  /usr/include/bits/waitflags.h /usr/include/bits/waitstatus.h \
  /usr/include/endian.h /usr/include/bits/endian.h \
@@ -15,23 +16,29 @@ igzip/igzip_base.lo: igzip/igzip_base.c /usr/include/stdc-predef.h \
  /usr/include/bits/sigset.h /usr/include/bits/time.h \
  /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h \
  /usr/include/alloca.h /usr/include/bits/stdlib-float.h \
- /usr/include/assert.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/emmintrin.h \
+ /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/stdint.h \
+ /usr/include/stdint.h /usr/include/bits/wchar.h /usr/include/string.h \
+ /usr/include/bits/string.h /usr/include/bits/string2.h \
+ /usr/include/assert.h include/igzip_lib.h include/types.h \
+ igzip/huff_codes.h igzip/bitbuf2.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/x86intrin.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/ia32intrin.h \
- /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/mmintrin.h \
- /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/xmmintrin.h \
- /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/mm_malloc.h \
- /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/emmintrin.h \
- /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/immintrin.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/fxsrintrin.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/adxintrin.h \
- igzip/huff_codes.h /usr/include/string.h igzip/bitbuf2.h
+ igzip/huffman.h igzip/flatten_ll.h
 
 /usr/include/stdc-predef.h:
 
-/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/stdint.h:
+/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/immintrin.h:
 
-/usr/include/stdint.h:
+/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/mmintrin.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/xmmintrin.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/mm_malloc.h:
+
+/usr/include/stdlib.h:
 
 /usr/include/features.h:
 
@@ -42,16 +49,6 @@ igzip/igzip_base.lo: igzip/igzip_base.c /usr/include/stdc-predef.h \
 /usr/include/gnu/stubs.h:
 
 /usr/include/gnu/stubs-64.h:
-
-/usr/include/bits/wchar.h:
-
-include/igzip_lib.h:
-
-include/types.h:
-
-igzip/huffman.h:
-
-/usr/include/stdlib.h:
 
 /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/stddef.h:
 
@@ -93,28 +90,38 @@ igzip/huffman.h:
 
 /usr/include/bits/stdlib-float.h:
 
+/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/emmintrin.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/stdint.h:
+
+/usr/include/stdint.h:
+
+/usr/include/bits/wchar.h:
+
+/usr/include/string.h:
+
+/usr/include/bits/string.h:
+
+/usr/include/bits/string2.h:
+
 /usr/include/assert.h:
+
+include/igzip_lib.h:
+
+include/types.h:
+
+igzip/huff_codes.h:
+
+igzip/bitbuf2.h:
 
 /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/x86intrin.h:
 
 /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/ia32intrin.h:
 
-/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/mmintrin.h:
-
-/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/xmmintrin.h:
-
-/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/mm_malloc.h:
-
-/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/emmintrin.h:
-
-/usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/immintrin.h:
-
 /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/fxsrintrin.h:
 
 /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/adxintrin.h:
 
-igzip/huff_codes.h:
+igzip/huffman.h:
 
-/usr/include/string.h:
-
-igzip/bitbuf2.h:
+igzip/flatten_ll.h:

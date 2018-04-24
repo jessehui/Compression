@@ -89,7 +89,5 @@ int ZEXPORT uncompress (dest, destLen, source, sourceLen)
     const Bytef *source;
     uLong sourceLen;
 {
-//
-
     return uncompress2(dest, destLen, source, &sourceLen);
 }

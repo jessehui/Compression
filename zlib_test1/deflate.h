@@ -16,7 +16,7 @@
 #include "zutil.h"
 
 #ifdef ISAL_INSTALLED
-#   include "igzip_lib.h"
+#   include "isa-l.h"
 #endif
 
 /* define NO_GZIP when compiling if you want to disable gzip header and

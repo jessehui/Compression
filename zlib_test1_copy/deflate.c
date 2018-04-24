@@ -193,10 +193,6 @@ local const config configuration_table[10] = {
     s->head[s->hash_size-1] = NIL; \
     zmemzero((Bytef *)s->head, (unsigned)(s->hash_size-1)*sizeof(*s->head));
 
-#ifdef ISAL_INSTALLED
-    static unsigned isal_enable_flag = 1;
-#endif
-
 /* ===========================================================================
  * Slide the hash table when sliding the window down (could be avoided with 32
  * bit values at the expense of memory usage). We slide even when level == 0 to
@@ -261,6 +257,10 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
      * output size for (length,distance) codes is <= 24 bits.
      */
 
+    //#ifdef GZIP
+    //    printf("Deflate: GZIP Defined\n");
+    //#endif
+
     if (version == Z_NULL || version[0] != my_version[0] ||
         stream_size != sizeof(z_stream)) {
         return Z_VERSION_ERROR;
@@ -315,9 +315,11 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
         isal_s->gzip_flag = IGZIP_DEFLATE;
       	if (wrap == 2) {
             isal_s->gzip_flag = IGZIP_GZIP_NO_HDR;
+            //isal_s->avail_out += 8;
         }
-        else if (wrap == 1) {
+        else if (wrap == 0) {
             isal_s->gzip_flag = IGZIP_ZLIB_NO_HDR;
+    
         }
 
         
@@ -349,9 +351,9 @@ int ZEXPORT deflateInit2_(strm, level, method, windowBits, memLevel, strategy,
             isal_s->level_buf_size = ISAL_DEF_LVL3_DEFAULT;
             break;
             default:
-            isal_s->level = 2;
-            isal_s->level_buf = malloc(ISAL_DEF_LVL2_DEFAULT);
-            isal_s->level_buf_size = ISAL_DEF_LVL2_DEFAULT;
+            isal_s->level = 1;
+            isal_s->level_buf = malloc(ISAL_DEF_LVL1_DEFAULT);
+            isal_s->level_buf_size = ISAL_DEF_LVL1_DEFAULT;
         }
 
         if (isal_s->level_buf == 0) {
@@ -571,6 +573,7 @@ int ZEXPORT deflateReset (strm)
     z_streamp strm;
 {
     int ret;
+    printf("deflate Reset\n");
     ret = deflateResetKeep(strm);
     if (ret == Z_OK)
         lm_init(strm->state);
@@ -876,8 +879,7 @@ int ZEXPORT deflate (strm, flush)
     #ifdef ISAL_INSTALLED
     if (s->status == FINISH_STATE)
         return Z_STREAM_END;
-    else if ((s->status != GZIP_STATE) &&
-            (strm->internal_stream->gzip_flag != IGZIP_ZLIB_NO_HDR))
+    else if (s->status != GZIP_STATE)
         s->status = BUSY_STATE;
     #endif
     /* Write the header */
@@ -968,9 +970,6 @@ int ZEXPORT deflate (strm, flush)
         }
     }
     if (s->status == EXTRA_STATE) {
-#ifdef ISAL_INSTALLED
-        isal_enable_flag = 0;
-#endif
         if (s->gzhead->extra != Z_NULL) {
             ulg beg = s->pending;   /* start of bytes to update crc */
             uInt left = (s->gzhead->extra_len & 0xffff) - s->gzindex;
@@ -1064,54 +1063,69 @@ int ZEXPORT deflate (strm, flush)
     }
 #endif
 
-#ifdef ISAL_INSTALLED
     if(flush == Z_PARTIAL_FLUSH || flush == Z_BLOCK || flush == Z_TREES)
-        isal_enable_flag = 0;
+        goto _next_;
     if(s->strategy != Z_DEFAULT_STRATEGY)
-        isal_enable_flag = 0;
+        goto _next_;
 
-    if(isal_enable_flag) {
-        struct isal_zstream *isal_s = strm->internal_stream;
-        switch (flush) {
-            case Z_NO_FLUSH: isal_s->flush = NO_FLUSH; break;
-            case Z_SYNC_FLUSH: isal_s->flush = SYNC_FLUSH; break;
-            case Z_FULL_FLUSH: isal_s->flush = FULL_FLUSH; break;
-            case Z_FINISH: isal_s->flush = FINISH_FLUSH; break;
-            default: isal_s->flush = NO_FLUSH;
-        }
-        isal_s->next_out = strm->next_out;
-        isal_s->avail_out = strm->avail_out;
-        isal_s->next_in = strm->next_in;
-        isal_s->avail_in = strm->avail_in;
-        if(strm->avail_in == 0)
-            isal_s->end_of_stream = 1;
-        
-        isal_deflate(isal_s);
-        
-        strm->next_out = isal_s->next_out;
-        strm->avail_out = isal_s->avail_out; 
-        strm->next_in = isal_s->next_in; 
-        strm->avail_in = isal_s->avail_in;
-        strm->total_out = isal_s->total_out;
-        strm->total_in = isal_s->total_in;
-        strm->internal_stream = isal_s;
-
-        
-        if (strm->avail_out == 0) {
-            s->last_flush = -1; /* avoid BUF_ERROR at next call, see above */
-            return Z_OK;
-        }
-        
-        if ((isal_s->internal_state.state != ZSTATE_END) ||
-            (flush == Z_NO_FLUSH))
-            return Z_OK;
-        s->status = FINISH_STATE;
-        return Z_STREAM_END;
+    #ifdef ISAL_INSTALLED
+    struct isal_zstream *isal_s = strm->internal_stream;
+    switch (flush) {
+        case Z_NO_FLUSH: isal_s->flush = NO_FLUSH; break;
+        case Z_SYNC_FLUSH: isal_s->flush = SYNC_FLUSH; break;
+        case Z_FULL_FLUSH: isal_s->flush = FULL_FLUSH; break;
+        case Z_FINISH: isal_s->flush = FINISH_FLUSH; break;
+        default: isal_s->flush = NO_FLUSH;
     }
+    isal_s->next_out = strm->next_out;
+    isal_s->avail_out = strm->avail_out;
+    isal_s->next_in = strm->next_in;
+    isal_s->avail_in = strm->avail_in;
+    if(strm->avail_in == 0)
+        isal_s->end_of_stream = 1;
+    
+    isal_deflate(isal_s);
+    strm->next_out = isal_s->next_out;
+    strm->avail_out = isal_s->avail_out; 
+    strm->next_in = isal_s->next_in; 
+    strm->avail_in = isal_s->avail_in;
+    strm->total_out = isal_s->total_out;
+    strm->total_in = isal_s->total_in;
+    strm->internal_stream = isal_s;
+
+    if (flush == Z_FULL_FLUSH || flush == Z_SYNC_FLUSH) { /* FULL_FLUSH or SYNC_FLUSH */
+        _tr_stored_block(s, (char*)0, 0L, 0);
+            /* For a full flush, this empty block will be recognized
+             * as a special marker by inflate_sync().
+             */
+        if (flush == Z_FULL_FLUSH) {
+               CLEAR_HASH(s);             /* forget history */
+               if (s->lookahead == 0) {
+                   s->strstart = 0;
+                   s->block_start = 0L;
+                   s->insert = 0;
+               }
+        }
+    }
+
+    flush_pending(strm);
+    if (strm->avail_out == 0) {
+        s->last_flush = -1; /* avoid BUF_ERROR at next call, see above */
+        return Z_OK;
+    }
+    
+    if ((isal_s->internal_state.state != ZSTATE_END) ||
+        (flush == Z_NO_FLUSH))
+        // (isal_s->avail_in = 0) )
+        return Z_OK;
+    s->status = FINISH_STATE;
+    return Z_STREAM_END;
+    goto _trailer_;
 #endif
 
     /* Start a new block or continue the current one.
      */
+_next_:
     if (strm->avail_in != 0 || s->lookahead != 0 ||
         (flush != Z_NO_FLUSH && s->status != FINISH_STATE)) {
         block_state bstate;
@@ -1165,6 +1179,7 @@ int ZEXPORT deflate (strm, flush)
     if (flush != Z_FINISH) return Z_OK;
     if (s->wrap <= 0) return Z_STREAM_END;
 
+_trailer_:
     /* Write the trailer */
 #ifdef GZIP
     if (s->wrap == 2) {
@@ -1196,8 +1211,7 @@ int ZEXPORT deflateEnd (strm)
     z_streamp strm;
 {
  #ifdef ISAL_INSTALLED
-    if(isal_enable_flag)
-        ZFREE(strm, strm->internal_stream);
+     return Z_OK;
  #endif
 
     int status;

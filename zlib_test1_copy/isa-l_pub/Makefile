@@ -1206,9 +1206,9 @@ AWK = gawk
 CC = gcc -std=gnu99
 CCAS = $(as_filter)
 CCASDEPMODE = depmode=gcc3
-CCASFLAGS = -g
+CCASFLAGS = -g -O2
 CCDEPMODE = depmode=gcc3
-CFLAGS = -g
+CFLAGS = -g -O2
 CPP = gcc -std=gnu99 -E
 CPPFLAGS = 
 CYGPATH_W = echo

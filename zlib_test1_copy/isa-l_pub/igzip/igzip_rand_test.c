@@ -33,7 +33,7 @@
 #include <string.h>
 #include <assert.h>
 #include "igzip_lib.h"
-//#include "checksum_test_ref.h"
+#include "checksum_test_ref.h"
 #include "inflate_std_vects.h"
 #include <math.h>
 #include "test.h"
@@ -54,10 +54,9 @@
 
 #define MAX_FILE_SIZE 0x7fff8fff
 
-#define str1 "hello, hello!"
-//#define str2 "one two three four five six seven eight nine ten eleven twelve " \
-//		 "thirteen fourteen fifteen sixteen"
-#define str2 str1
+#define str1 "Short test string"
+#define str2 "one two three four five six seven eight nine ten eleven twelve " \
+		 "thirteen fourteen fifteen sixteen"
 
 #define TYPE0_HDR_SIZE 5	/* Size of a type 0 blocks header in bytes */
 #define TYPE0_MAX_SIZE 65535	/* Max length of a type 0 block in bytes (excludes the header) */

@@ -86,7 +86,7 @@
 
 #ifdef ISAL_INSTALLED
 #	define inflate_state isal_inflate_state
-#	include "isa-l.h"
+#	include "igzip_lib.h"
 #endif
 
 #undef inflate_state
@@ -98,17 +98,12 @@
 #  endif
 #endif
 
-
-#ifdef ISAL_INSTALLED
-    static unsigned isal_enable_flag = 1;
-    static const unsigned int gzip_hdr_bytes = 10;
-    static const unsigned int zlib_hdr_bytes = 2;
-    static const unsigned int gzip_trl_bytes = 8;
-    static const unsigned int zlib_trl_bytes = 4;
-    static const int gzip_extra_bytes = 18;	/* gzip_hdr_bytes + gzip_trl_bytes */
-    static const int zlib_extra_bytes = 6;	/* zlib_hdr_bytes + zlib_trl_bytes */
-#endif
-
+static const uint32_t gzip_hdr_bytes = 10;
+static const uint32_t zlib_hdr_bytes = 2;
+static const uint32_t gzip_trl_bytes = 8;
+static const uint32_t zlib_trl_bytes = 4;
+static const int gzip_extra_bytes = 18;	/* gzip_hdr_bytes + gzip_trl_bytes */
+static const int zlib_extra_bytes = 6;	/* zlib_hdr_bytes + zlib_trl_bytes */
 
 /* function prototypes */
 local int inflateStateCheck OF((z_streamp strm));
@@ -240,7 +235,6 @@ int stream_size;
         strm->zfree = zcfree;
 #endif
 
-
 #ifdef ISAL_INSTALLED
     struct isal_inflate_state *isal_istate = (struct isal_inflate_state *)
             ZALLOC(strm, 1, sizeof(struct isal_inflate_state));
@@ -255,7 +249,6 @@ int stream_size;
     strm->isal_inflate_state = isal_istate;
     strm->total_in = strm->total_out = 0;
     //return Z_OK;
-
 #endif
 
     state = (struct inflate_state FAR *)
@@ -674,8 +667,171 @@ int flush;
     code last;                  /* parent table entry */
     unsigned len;               /* length to copy for repeats, bits to drop */
     int ret;                    /* return code */
+
 #ifdef ISAL_INSTALLED
-    int igzip_flag;
+    uint8_t *comp_tmp = NULL, *uncomp_tmp = NULL;
+    uint32_t comp_tmp_size = 0, uncomp_tmp_size = 0;
+    uint32_t comp_processed = 0, uncomp_processed = 0;
+
+    uint8_t * compress_buf = strm->next_in;
+    uint64_t compress_len = strm->avail_in;
+    uint8_t * uncompress_buf = strm->next_out;
+    uint32_t * uncompress_len = &(strm->avail_out);
+
+    struct isal_inflate_state *istate = strm->isal_inflate_state;
+    int gzip_hdr_result = 0, gzip_trl_result = 0;
+    int gzip_flag = istate->crc_flag;
+    
+    istate->next_in = strm->next_in;
+    istate->next_out = strm->next_out;
+    istate->avail_in = strm->avail_in;
+    istate->avail_out = strm->avail_out;
+    istate->total_out = strm->total_out;
+    //compress_len = 0;
+
+    if (istate->crc_flag == IGZIP_GZIP) {
+        gzip_hdr_result = check_gzip_header(istate->next_in);
+        istate->next_in += gzip_hdr_bytes;
+        istate->avail_in -= gzip_hdr_bytes;
+    } else if (istate->crc_flag == IGZIP_ZLIB) {
+        gzip_hdr_result = check_zlib_header(istate->next_in);
+        istate->next_in += zlib_hdr_bytes;
+        istate->avail_in -= zlib_hdr_bytes;
+    }
+        //istate->next_in = comp_tmp;
+        //istate->avail_in = comp_tmp_size;
+
+    
+
+    //#ifdef GUNZIP
+    //printf("inflate: GUNZIP Defined\n");
+    //#endif
+
+    ret = isal_inflate_stateless(istate);
+
+    strm->total_out = istate->total_out;
+
+    if (gzip_flag) {
+        if (gzip_flag == IGZIP_GZIP || gzip_flag == IGZIP_GZIP_NO_HDR) {
+            if (!ret)
+                ret =
+                    check_gzip_trl(*(uint64_t *) istate->next_in, istate->crc,
+                           strm->next_out, strm->avail_out);
+            istate->avail_in -= gzip_trl_bytes;
+        } else if (gzip_flag == IGZIP_ZLIB || gzip_flag == IGZIP_ZLIB_NO_HDR) {
+            if (!ret)
+                ret =
+                    check_zlib_trl(*(uint32_t *) istate->next_in, istate->crc,
+                           strm->next_out, strm->avail_out);
+            istate->avail_in -= zlib_trl_bytes;
+
+        }
+
+    }
+
+    if (ret == 0 && istate->avail_in != 0)
+        ret = ISAL_DECOMP_OK;
+
+
+    // while (1) {
+    //     if (istate->avail_in == 0) {
+    //         comp_tmp_size = rand() % (compress_len + 1);
+
+    //         if (comp_tmp_size >= compress_len - comp_processed)
+    //             comp_tmp_size = compress_len - comp_processed;
+
+    //         if (comp_tmp_size != 0) {
+    //             if (comp_tmp != NULL) {
+    //                 free(comp_tmp);
+    //                 comp_tmp = NULL;
+    //             }
+
+    //             comp_tmp = malloc(comp_tmp_size);
+
+    //             if (comp_tmp == NULL) {
+    //                 puts("Failed to allocate memory\n");
+    //                 exit(0);
+    //             }
+
+    //             memcpy(comp_tmp, compress_buf + comp_processed, comp_tmp_size);
+    //             comp_processed += comp_tmp_size;
+
+    //             istate->next_in = comp_tmp;
+    //             istate->avail_in = comp_tmp_size;
+                
+    //         }
+    //     }
+
+    //     if (istate->avail_out == 0) {
+    //         // Save uncompressed data into uncompress_buf 
+    //         if (uncomp_tmp != NULL) {
+    //             memcpy(uncompress_buf + uncomp_processed, uncomp_tmp,
+    //                    uncomp_tmp_size);
+    //             uncomp_processed += uncomp_tmp_size;
+    //         }
+
+    //         uncomp_tmp_size = rand() % (*uncompress_len + 1);
+
+    //         /* Limit size of buffer to be smaller than maximum */
+    //         if (uncomp_tmp_size > *uncompress_len - uncomp_processed)
+    //             uncomp_tmp_size = *uncompress_len - uncomp_processed;
+
+    //         if (uncomp_tmp_size != 0) {
+
+    //             if (uncomp_tmp != NULL) {
+    //                 fflush(0);
+    //                 free(uncomp_tmp);
+    //                 uncomp_tmp = NULL;
+    //             }
+
+    //             uncomp_tmp = malloc(uncomp_tmp_size);
+    //             if (uncomp_tmp == NULL) {
+    //                 puts("Failed to allocate memory\n");
+    //                 exit(0);
+    //             }
+
+    //             istate->avail_out = uncomp_tmp_size;
+    //             istate->next_out = uncomp_tmp;
+    //         }
+    //     }
+
+        
+    //     ret = isal_inflate(istate);
+
+    //     printf("istate->total_out = %d\n", istate->total_out);
+    //     istate->read_in_length += comp_tmp_size;
+
+    //     if (istate->block_state == ISAL_BLOCK_FINISH || ret != 0) {
+    //         memcpy(uncompress_buf + uncomp_processed, uncomp_tmp, uncomp_tmp_size);
+    //         *uncompress_len = istate->total_out;
+    //         break;
+    //     }
+    // }   //end while 1
+
+    strm->next_out = istate->next_out;
+    strm->next_in = istate->next_in;
+    strm->avail_in = istate->avail_in;
+    strm->avail_out = istate->avail_out;
+    strm->total_out = istate->total_out;
+    //strm->total_in = istate->total_in;
+
+    // if (comp_tmp != NULL) {
+    //     free(comp_tmp);
+    //     comp_tmp = NULL;
+    // }
+    // if (uncomp_tmp != NULL) {
+    //     free(uncomp_tmp);
+    //     uncomp_tmp = NULL;
+    // }
+
+    // //free(istate);
+
+    if (ret == ISAL_DECOMP_OK)
+        return Z_STREAM_END;
+    else {
+        Tracev((stderr, "ISA-L Inflate error:%d\n", ret));
+        return Z_BUF_ERROR;
+        }
 #endif
 
 
@@ -705,9 +861,6 @@ int flush;
             NEEDBITS(16);
 #ifdef GUNZIP
             if ((state->wrap & 2) && hold == 0x8b1f) {  /* gzip header */
-            #ifdef ISAL_INSTALLED
-                igzip_flag = IGZIP_GZIP;
-            #endif
                 if (state->wbits == 0)
                     state->wbits = 15;
                 state->check = crc32(0L, Z_NULL, 0);
@@ -747,9 +900,6 @@ int flush;
             strm->adler = state->check = adler32(0L, Z_NULL, 0);
             state->mode = hold & 0x200 ? DICTID : TYPE;
             INITBITS();
-            #ifdef ISAL_INSTALLED
-            igzip_flag = IGZIP_ZLIB;
-            #endif
             break;
 #ifdef GUNZIP
         case FLAGS:
@@ -804,9 +954,6 @@ int flush;
             state->mode = EXTRA;
         case EXTRA:
             if (state->flags & 0x0400) {
-#ifdef ISAL_INSTALLED
-                isal_enable_flag = 0;
-#endif
                 copy = state->length;
                 if (copy > have) copy = have;
                 if (copy) {
@@ -829,9 +976,6 @@ int flush;
             state->mode = NAME;
         case NAME:
             if (state->flags & 0x0800) {
-#ifdef ISAL_INSTALLED
-                isal_enable_flag = 0;
-#endif
                 if (have == 0) goto inf_leave;
                 copy = 0;
                 do {
@@ -853,9 +997,6 @@ int flush;
             state->mode = COMMENT;
         case COMMENT:
             if (state->flags & 0x1000) {
-#ifdef ISAL_INSTALLED
-                isal_enable_flag = 0;
-#endif
                 if (have == 0) goto inf_leave;
                 copy = 0;
                 do {
@@ -876,9 +1017,6 @@ int flush;
             state->mode = HCRC;
         case HCRC:
             if (state->flags & 0x0200) {
-#ifdef ISAL_INSTALLED
-                isal_enable_flag = 0;
-#endif
                 NEEDBITS(16);
                 if ((state->wrap & 4) && hold != (state->check & 0xffff)) {
                     strm->msg = (char *)"header crc mismatch";
@@ -908,79 +1046,7 @@ int flush;
             strm->adler = state->check = adler32(0L, Z_NULL, 0);
             state->mode = TYPE;
         case TYPE:
-#ifdef ISAL_INSTALLED
-            if(flush == Z_PARTIAL_FLUSH || flush == Z_BLOCK || flush == Z_TREES)
-                isal_enable_flag = 0;
-            if(isal_enable_flag) {
-                uint8_t *comp_tmp = NULL, *uncomp_tmp = NULL;
-                uint32_t comp_tmp_size = 0, uncomp_tmp_size = 0;
-                uint32_t comp_processed = 0, uncomp_processed = 0;
-
-                uint8_t * compress_buf = strm->next_in;
-                uint64_t compress_len = strm->avail_in;
-                uint8_t * uncompress_buf = strm->next_out;
-                uint32_t * uncompress_len = &(strm->avail_out);
-
-                struct isal_inflate_state *istate = strm->isal_inflate_state;
-                int gzip_hdr_result = 0, gzip_trl_result = 0;
-                istate->crc_flag = igzip_flag;
-                
-                istate->next_in = strm->next_in;
-                istate->next_out = strm->next_out;
-                istate->avail_in = strm->avail_in;
-                istate->avail_out = strm->avail_out;
-                istate->total_out = strm->total_out;
-                //compress_len = 0;
-
-                if (istate->crc_flag == IGZIP_GZIP) {
-                    gzip_hdr_result = check_gzip_header(istate->next_in);
-                    istate->next_in += gzip_hdr_bytes;
-                    istate->avail_in -= gzip_hdr_bytes;
-                } else if (istate->crc_flag == IGZIP_ZLIB) {
-                    gzip_hdr_result = check_zlib_header(istate->next_in);
-                    istate->next_in += zlib_hdr_bytes;
-                    istate->avail_in -= zlib_hdr_bytes;
-                }
-
-                ret = isal_inflate_stateless(istate);
-
-                strm->total_out = istate->total_out;
-
-                if (igzip_flag) {
-                    if (igzip_flag == IGZIP_GZIP || igzip_flag == IGZIP_GZIP_NO_HDR) {
-                        if (!ret)
-                        /*    ret =
-                                check_gzip_trl(*(uint64_t *) istate->next_in, istate->crc,
-                                       strm->next_out, strm->avail_out);   */
-                        istate->avail_in -= gzip_trl_bytes;
-                    } else if (igzip_flag == IGZIP_ZLIB || igzip_flag == IGZIP_ZLIB_NO_HDR) {
-                        if (!ret)
-                        /*    ret = 
-                                check_zlib_trl(*(uint32_t *) istate->next_in, istate->crc,
-                                       strm->next_out, strm->avail_out);   */
-                        istate->avail_in -= zlib_trl_bytes;
-
-                    }
-
-                }
-
-                if (ret == 0 && istate->avail_in != 0)
-                    ret = ISAL_DECOMP_OK;
-
-                strm->next_out = istate->next_out;
-                strm->next_in = istate->next_in;
-                strm->avail_in = istate->avail_in;
-                strm->avail_out = istate->avail_out;
-                strm->total_out = istate->total_out;
-
-                if (ret == ISAL_DECOMP_OK)
-                    return Z_STREAM_END;
-                else {
-                    Tracev((stderr, "ISA-L Inflate error:%d\n", ret));
-                    return Z_BUF_ERROR;
-                    }
-            }
-#endif
+            if (flush == Z_BLOCK || flush == Z_TREES) goto inf_leave;
         case TYPEDO:
             if (state->last) {
                 BYTEBITS();
@@ -1410,10 +1476,11 @@ int flush;
 int ZEXPORT inflateEnd(strm)
 z_streamp strm;
 {
-#ifdef ISAL_INSTALLED
-    if(isal_enable_flag)
-        ZFREE(strm, strm->isal_inflate_state);
-#endif
+    #ifdef ISAL_INSTALLED
+    
+    return Z_OK;
+    #endif
+    
     struct inflate_state FAR *state;
     if (inflateStateCheck(strm))
         return Z_STREAM_ERROR;

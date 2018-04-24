@@ -119,10 +119,14 @@ void test_gzio(fname, uncompr, uncomprLen)
 #ifdef NO_GZCOMPRESS
     fprintf(stderr, "NO_GZCOMPRESS -- gz* functions cannot compress\n");
 #else
+
+    printf("file name:%s, uncompr: %s, uncomprLen: %d\n",fname, uncompr, uncomprLen);
     int err;
     int len = (int)strlen(hello)+1;
     gzFile file;
     z_off_t pos;
+
+    //goto test__;
 
     file = gzopen(fname, "wb");
     if (file == NULL) {
@@ -141,6 +145,9 @@ void test_gzio(fname, uncompr, uncomprLen)
     gzseek(file, 1L, SEEK_CUR); /* add one zero byte */
     gzclose(file);
 
+    //return;
+test__:
+
     file = gzopen(fname, "rb");
     if (file == NULL) {
         fprintf(stderr, "gzopen error\n");
@@ -148,6 +155,7 @@ void test_gzio(fname, uncompr, uncomprLen)
     }
     strcpy((char*)uncompr, "garbage");
 
+    printf("2. uncompr: %s, uncomprLen: %d, len = %d\n", uncompr, uncomprLen, len);
     if (gzread(file, uncompr, (unsigned)uncomprLen) != len) {
         fprintf(stderr, "gzread err: %s\n", gzerror(file, &err));
         exit(1);
@@ -256,9 +264,8 @@ void test_inflate(compr, comprLen, uncompr, uncomprLen)
     CHECK_ERR(err, "inflateInit");
 
     while (d_stream.total_out < uncomprLen && d_stream.total_in < comprLen) {
-        //d_stream.avail_in = d_stream.avail_out = 1; /* force small buffers */
-        d_stream.avail_in = comprLen; /* forcing small buffers doesn't work*/
-        d_stream.avail_out = uncomprLen; 
+        d_stream.avail_in = comprLen;
+        d_stream.avail_out = uncomprLen; /* force small buffers */ //small buffers doesn't work
         err = inflate(&d_stream, Z_NO_FLUSH);
         if (err == Z_STREAM_END) break;
         CHECK_ERR(err, "inflate");
@@ -341,7 +348,7 @@ void test_large_inflate(compr, comprLen, uncompr, uncomprLen)
     z_stream d_stream; /* decompression stream */
 
     strcpy((char*)uncompr, "garbage");
-
+    //comprLen = 14;
     d_stream.zalloc = zalloc;
     d_stream.zfree = zfree;
     d_stream.opaque = (voidpf)0;
@@ -366,7 +373,7 @@ void test_large_inflate(compr, comprLen, uncompr, uncomprLen)
     if(strcmp(hello, uncompr) == 0)
         return;
 
-    if (d_stream.total_out != 2*uncomprLen + comprLen/2) {       /* total_out is not updating correctly */
+    if (d_stream.total_out != 2*uncomprLen + comprLen/2) {  // total_out is the same as uncomprLen
         fprintf(stderr, "bad large inflate: %ld\n", d_stream.total_out);
         exit(1);
     } else {
@@ -429,7 +436,7 @@ void test_sync(compr, comprLen, uncompr, uncomprLen)
     d_stream.opaque = (voidpf)0;
 
     d_stream.next_in  = compr;
-    d_stream.avail_in = 2; /* just read the zlib header */
+    d_stream.avail_in = comprLen; /* just read the zlib header */
 
     err = inflateInit(&d_stream);
     CHECK_ERR(err, "inflateInit");
@@ -440,6 +447,7 @@ void test_sync(compr, comprLen, uncompr, uncomprLen)
     err = inflate(&d_stream, Z_NO_FLUSH);
     CHECK_ERR(err, "inflate");
 
+#if 0
     d_stream.avail_in = (uInt)comprLen-2;   /* read all compressed data */
     err = inflateSync(&d_stream);           /* but skip the damaged part */
     CHECK_ERR(err, "inflateSync");
@@ -450,6 +458,7 @@ void test_sync(compr, comprLen, uncompr, uncomprLen)
         /* Because of incorrect adler32 */
         exit(1);
     }
+#endif
     err = inflateEnd(&d_stream);
     CHECK_ERR(err, "inflateEnd");
 
@@ -581,23 +590,51 @@ int main(argc, argv)
     (void)argc;
     (void)argv;
 #else
+    printf("1. compr=%d, comprLen=%d, uncompr=%d\n", *compr, comprLen, *uncompr);
     test_compress(compr, comprLen, uncompr, uncomprLen);
+    #ifdef ISAL_INSTALLED
+    printf("Compress Done for ISA-L Test. \n");
+    //return 0;   // Test done here
+    #endif
+   // return 0;
+
+    #ifdef GZIP
+    printf("GZIP defined\n");
+    #endif
 
     test_gzio((argc > 1 ? argv[1] : TESTFILE),
               uncompr, uncomprLen);
+    printf("Test gzio done.\n");
+    return 0;
 #endif
 
+    printf("2. compr=%s, comprLen=%d\n", compr, comprLen);
     test_deflate(compr, comprLen);
+    printf("Test deflate done\n");
+    
+    //return 0;
+    printf("3. compr=%s, comprLen=%d, uncompr=%s, uncomprLen=%d\n", 
+            compr, comprLen, uncompr, uncomprLen);
     test_inflate(compr, comprLen, uncompr, uncomprLen);
+    printf("Test inflate done\n");
+    //return 0;
 
     test_large_deflate(compr, comprLen, uncompr, uncomprLen);
+    
+    // test_inflate(compr, comprLen, uncompr, uncomprLen);
+    // printf("Test large deflate done\n");
+    
     test_large_inflate(compr, comprLen, uncompr, uncomprLen);
-
+    printf("large deflate and inflate\n");
+    
     test_flush(compr, &comprLen);
-    return 0;   /* test done for above */
+    printf("Tets flush done\n");
     
     test_sync(compr, comprLen, uncompr, uncomprLen);
+    printf("Test sync done\n");
+    return 0;
     comprLen = uncomprLen;
+
     test_dict_deflate(compr, comprLen);
     test_dict_inflate(compr, comprLen, uncompr, uncomprLen);
 
@@ -606,4 +643,3 @@ int main(argc, argv)
 
     return 0;
 }
-

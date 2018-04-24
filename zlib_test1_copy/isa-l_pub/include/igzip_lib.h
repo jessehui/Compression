@@ -762,12 +762,9 @@ int isal_inflate(struct inflate_state *state);
 int isal_inflate_stateless(struct inflate_state *state);
 
 uint32_t check_gzip_header(uint8_t * z_buf);
-
 uint32_t check_zlib_header(uint8_t * z_buf);
-
 uint32_t check_gzip_trl(uint64_t gzip_trl, uint32_t inflate_crc, uint8_t * uncompress_buf,
                         uint32_t uncompress_len);
-
 uint32_t check_zlib_trl(uint32_t zlib_trl, uint32_t inflate_adler, uint8_t * uncompress_buf,
                         uint32_t uncompress_len);
 

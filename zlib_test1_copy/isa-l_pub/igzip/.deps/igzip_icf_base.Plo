@@ -1,4 +1,5 @@
-igzip/igzip_base.lo: igzip/igzip_base.c /usr/include/stdc-predef.h \
+igzip/igzip_icf_base.lo: igzip/igzip_icf_base.c \
+ /usr/include/stdc-predef.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/stdint.h \
  /usr/include/stdint.h /usr/include/features.h /usr/include/sys/cdefs.h \
  /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
@@ -25,7 +26,9 @@ igzip/igzip_base.lo: igzip/igzip_base.c /usr/include/stdc-predef.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/immintrin.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/fxsrintrin.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/adxintrin.h \
- igzip/huff_codes.h /usr/include/string.h igzip/bitbuf2.h
+ igzip/huff_codes.h /usr/include/string.h /usr/include/bits/string.h \
+ /usr/include/bits/string2.h igzip/bitbuf2.h igzip/encode_df.h \
+ igzip/igzip_level_buf_structs.h
 
 /usr/include/stdc-predef.h:
 
@@ -117,4 +120,12 @@ igzip/huff_codes.h:
 
 /usr/include/string.h:
 
+/usr/include/bits/string.h:
+
+/usr/include/bits/string2.h:
+
 igzip/bitbuf2.h:
+
+igzip/encode_df.h:
+
+igzip/igzip_level_buf_structs.h:

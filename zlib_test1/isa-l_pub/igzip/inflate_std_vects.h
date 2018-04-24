@@ -1,3 +1,6 @@
+#ifndef _INFLATE_STD_VECTS_H
+#define _INFLATE_STD_VECTS_H
+
 #include <stdint.h>
 #include "igzip_lib.h"
 
@@ -1552,3 +1555,5 @@ struct vect_result std_vect_array[] = {
 	{std_vect_149, sizeof(std_vect_149), ISAL_INVALID_BLOCK},
 	{std_vect_150, sizeof(std_vect_150), ISAL_INVALID_SYMBOL}
 };
+
+#endif

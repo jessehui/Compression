@@ -26,9 +26,8 @@ igzip/igzip_icf_base.lo: igzip/igzip_icf_base.c \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/immintrin.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/fxsrintrin.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/adxintrin.h \
- igzip/huff_codes.h /usr/include/string.h /usr/include/bits/string.h \
- /usr/include/bits/string2.h igzip/bitbuf2.h igzip/encode_df.h \
- igzip/igzip_level_buf_structs.h
+ igzip/huff_codes.h /usr/include/string.h igzip/bitbuf2.h \
+ igzip/encode_df.h igzip/igzip_level_buf_structs.h
 
 /usr/include/stdc-predef.h:
 
@@ -119,10 +118,6 @@ igzip/huffman.h:
 igzip/huff_codes.h:
 
 /usr/include/string.h:
-
-/usr/include/bits/string.h:
-
-/usr/include/bits/string2.h:
 
 igzip/bitbuf2.h:
 
