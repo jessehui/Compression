@@ -277,6 +277,11 @@ typedef struct internal_state {
      * updated to the new high water mark.
      */
 
+#ifdef ISAL_INSTALLED
+    struct isal_zstream *internal_stream;  /* Internal stream used by ISA-L igzip */
+  //  struct inflate_state *isal_inflate_state;
+#endif
+
 } FAR deflate_state;
 
 /* Output a byte on the stream.

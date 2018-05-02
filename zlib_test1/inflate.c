@@ -84,11 +84,6 @@
 #include "inftrees.h"
 #include "inffast.h"
 
-#ifdef ISAL_INSTALLED
-#	define inflate_state isal_inflate_state
-#	include "isa-l.h"
-#endif
-
 #undef inflate_state
 #include "inflate.h"
 
@@ -251,8 +246,6 @@ int stream_size;
     isal_istate->next_out = strm->next_out;
     if(windowBits > 15)
         isal_istate->crc_flag = IGZIP_GZIP;
-    
-    strm->isal_inflate_state = isal_istate;
     strm->total_in = strm->total_out = 0;
     //return Z_OK;
 
@@ -262,6 +255,7 @@ int stream_size;
             ZALLOC(strm, 1, sizeof(struct inflate_state));
     if (state == Z_NULL) return Z_MEM_ERROR;
     Tracev((stderr, "inflate: allocated\n"));
+    state->isal_inflate_state = isal_istate;
     strm->state = (struct internal_state FAR *)state;
     state->strm = strm;
     state->window = Z_NULL;
@@ -906,8 +900,13 @@ int flush;
                 return Z_NEED_DICT;
             }
             strm->adler = state->check = adler32(0L, Z_NULL, 0);
+            #ifdef ISAL_INSTALLED
+            state->isal_inflate_state->block_state = ISAL_BLOCK_CODED;
+            isal_enable_flag = 0;
+            #endif
             state->mode = TYPE;
         case TYPE:
+             if (flush == Z_BLOCK || flush == Z_TREES) goto inf_leave;
 #ifdef ISAL_INSTALLED
             if(flush == Z_PARTIAL_FLUSH || flush == Z_BLOCK || flush == Z_TREES)
                 isal_enable_flag = 0;
@@ -921,7 +920,7 @@ int flush;
                 uint8_t * uncompress_buf = strm->next_out;
                 uint32_t * uncompress_len = &(strm->avail_out);
 
-                struct isal_inflate_state *istate = strm->isal_inflate_state;
+                struct isal_inflate_state *istate = state->isal_inflate_state;
                 int gzip_hdr_result = 0, gzip_trl_result = 0;
                 istate->crc_flag = igzip_flag;
                 
@@ -1410,15 +1409,15 @@ int flush;
 int ZEXPORT inflateEnd(strm)
 z_streamp strm;
 {
-#ifdef ISAL_INSTALLED
-    if(isal_enable_flag)
-        ZFREE(strm, strm->isal_inflate_state);
-#endif
     struct inflate_state FAR *state;
     if (inflateStateCheck(strm))
         return Z_STREAM_ERROR;
     state = (struct inflate_state FAR *)strm->state;
     if (state->window != Z_NULL) ZFREE(strm, state->window);
+#ifdef ISAL_INSTALLED
+    if(isal_enable_flag)
+        ZFREE(strm, state->isal_inflate_state);
+#endif
     ZFREE(strm, strm->state);
     strm->state = Z_NULL;
     Tracev((stderr, "inflate: end\n"));
@@ -1430,10 +1429,6 @@ z_streamp strm;
 Bytef *dictionary;
 uInt *dictLength;
 {
-#ifdef ISAL_INSTALLED
-    return Z_OK;
-#endif
-
     struct inflate_state FAR *state;
 
     /* check state */

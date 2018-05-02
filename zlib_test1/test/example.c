@@ -581,6 +581,7 @@ int main(argc, argv)
     (void)argc;
     (void)argv;
 #else
+    
     test_compress(compr, comprLen, uncompr, uncomprLen);
 
     test_gzio((argc > 1 ? argv[1] : TESTFILE),
@@ -594,16 +595,18 @@ int main(argc, argv)
     test_large_inflate(compr, comprLen, uncompr, uncomprLen);
 
     test_flush(compr, &comprLen);
-    return 0;   /* test done for above */
+   // return 0;   /* test done for above */
     
-    test_sync(compr, comprLen, uncompr, uncomprLen);
+   // test_sync(compr, comprLen, uncompr, uncomprLen);
     comprLen = uncomprLen;
     test_dict_deflate(compr, comprLen);
+    
     test_dict_inflate(compr, comprLen, uncompr, uncomprLen);
 
+    
     free(compr);
     free(uncompr);
-
+    printf("DICT test pass\n");
     return 0;
 }
 

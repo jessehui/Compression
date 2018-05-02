@@ -20,7 +20,8 @@ igzip/igzip_inflate.lo: igzip/igzip_inflate.c /usr/include/stdc-predef.h \
  /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h \
  /usr/include/alloca.h /usr/include/bits/stdlib-float.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/emmintrin.h \
- /usr/include/string.h /usr/include/assert.h igzip/bitbuf2.h \
+ /usr/include/string.h /usr/include/bits/string.h \
+ /usr/include/bits/string2.h /usr/include/assert.h igzip/bitbuf2.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/x86intrin.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/ia32intrin.h \
  /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/fxsrintrin.h \
@@ -104,6 +105,10 @@ igzip/huff_codes.h:
 /usr/lib/gcc/x86_64-redhat-linux/4.8.5/include/emmintrin.h:
 
 /usr/include/string.h:
+
+/usr/include/bits/string.h:
+
+/usr/include/bits/string2.h:
 
 /usr/include/assert.h:
 

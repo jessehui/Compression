@@ -1206,6 +1206,7 @@ static inline uint32_t hist_add(struct isal_zstream *stream, uint32_t history_si
 
 int isal_deflate(struct isal_zstream *stream)
 {
+    //printf("ISAL DEFLATE RUNNING\n");
 	struct isal_zstate *state = &stream->internal_state;
 	int ret = COMP_OK;
 	uint8_t *next_in;

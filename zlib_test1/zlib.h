@@ -103,11 +103,6 @@ typedef struct z_stream_s {
                            for deflate, or the decoding state for inflate */
     uLong   adler;      /* Adler-32 or CRC-32 value of the uncompressed data */
     uLong   reserved;   /* reserved for future use */
-
-#ifdef ISAL_INSTALLED
-    struct isal_zstream *internal_stream;  /* Internal stream used by ISA-L igzip */
-    struct inflate_state *isal_inflate_state;
-#endif
 } z_stream;
 
 typedef z_stream FAR *z_streamp;

@@ -16,6 +16,11 @@
 #  define GUNZIP
 #endif
 
+#ifdef ISAL_INSTALLED
+#	define inflate_state isal_inflate_state
+#	include "isa-l.h"
+#endif
+
 /* Possible inflate modes between inflate() calls */
 typedef enum {
     HEAD = 16180,   /* i: waiting for magic header */
@@ -79,6 +84,8 @@ typedef enum {
 
 /* State maintained between inflate() calls -- approximately 7K bytes, not
    including the allocated sliding window, which is up to 32K bytes. */
+#undef inflate_state;
+
 struct inflate_state {
     z_streamp strm;             /* pointer back to this zlib stream */
     inflate_mode mode;          /* current inflate mode */
@@ -122,4 +129,10 @@ struct inflate_state {
     int sane;                   /* if false, allow invalid distance too far */
     int back;                   /* bits back of last unprocessed length/lit */
     unsigned was;               /* initial length of match */
+
+#ifdef ISAL_INSTALLED
+#	define inflate_state isal_inflate_state 
+    struct inflate_state *isal_inflate_state;
+#   undef inflate_state
+#endif
 };
